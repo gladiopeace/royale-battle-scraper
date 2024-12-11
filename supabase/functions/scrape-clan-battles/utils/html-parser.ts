@@ -16,12 +16,18 @@ export const extractBattleType = (block: string): string => {
 };
 
 export const extractPlayerData = (block: string) => {
-  const namePattern = /<div[^>]*class="[^"]*player_name_header[^"]*"[^>]*>.*?<a[^>]*>([^<]+)<\/a>/gs;
-  const names = [...block.matchAll(namePattern)].map(match => match[1].trim());
+  // More specific selectors for player names
+  const namePattern = /<div[^>]*class="[^"]*player_name_header[^"]*"[^>]*>(?:.*?<a[^>]*>([^<]+)<\/a>|([^<]+))<\/div>/gs;
+  const names = [...block.matchAll(namePattern)]
+    .map(match => (match[1] || match[2])?.trim())
+    .filter(Boolean);
   
   const clanPattern = /<div[^>]*class="[^"]*battle_player_clan[^"]*"[^>]*>([^<]+)<\/div>/gs;
-  const clans = [...block.matchAll(clanPattern)].map(match => match[1].trim());
+  const clans = [...block.matchAll(clanPattern)]
+    .map(match => match[1].trim())
+    .filter(Boolean);
   
+  // More specific crown pattern
   const crownPattern = /<div[^>]*class="[^"]*result_header[^"]*"[^>]*>.*?(\d+)\s*-\s*(\d+)/s;
   const crownMatch = block.match(crownPattern);
 
@@ -36,27 +42,47 @@ export const extractPlayerData = (block: string) => {
 };
 
 export const hasNextPage = (html: string): boolean => {
-  return html.includes('class="item next"') || 
-         html.includes('class="next page"') ||
-         html.includes('class="pagination"') && html.includes('Next');
+  const indicators = [
+    'class="item next"',
+    'class="next page"',
+    'class="pagination"',
+    '>Next<',
+    'data-page="next"'
+  ];
+  
+  return indicators.some(indicator => html.includes(indicator));
 };
 
 export const isValidBattlePage = (html: string): boolean => {
   // Check for essential content indicators
-  const hasContent = html.includes('battle_') && 
-                    html.includes('player_name_header') && 
-                    html.includes('result_header');
+  const contentIndicators = [
+    'battle_',
+    'player_name_header',
+    'result_header',
+    'ui attached segment'
+  ];
+  
+  const hasContent = contentIndicators.every(indicator => html.includes(indicator));
                     
   // Check for blocking elements
-  const hasBlockers = html.includes('gdpr-overlay') || 
-                     html.includes('cookie-consent') ||
-                     html.includes('ad-overlay');
+  const blockingIndicators = [
+    'gdpr-overlay',
+    'cookie-consent',
+    'ad-overlay',
+    'loading-overlay'
+  ];
                      
+  const hasBlockers = blockingIndicators.some(blocker => html.includes(blocker));
+  
+  const contentLength = html.length;
+  
   console.log('Page validation:', {
     hasContent,
     hasBlockers,
-    htmlLength: html.length
+    contentLength,
+    contentIndicatorsPresent: contentIndicators.filter(i => html.includes(i)),
+    blockersPresent: blockingIndicators.filter(b => html.includes(b))
   });
 
-  return hasContent && !hasBlockers;
+  return hasContent && !hasBlockers && contentLength > 1000;
 };
