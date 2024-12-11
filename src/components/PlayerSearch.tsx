@@ -1,20 +1,13 @@
 import { Player } from "@/types/player";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { useState } from "react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface PlayerSearchProps {
   searchTerm: string;
@@ -26,68 +19,46 @@ interface PlayerSearchProps {
 }
 
 export const PlayerSearch = ({
-  searchTerm,
-  onSearchChange,
-  players,
+  players = [],
   selectedPlayer,
   onPlayerSelect,
   label,
 }: PlayerSearchProps) => {
-  const [open, setOpen] = useState(false);
-
-  // Ensure we always have an array to work with and filter it
-  const filteredPlayers = (players || []).filter((p) => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="flex flex-col space-y-2">
       <label className="text-sm font-medium text-muted-foreground">{label}</label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between bg-secondary/50 border-muted hover:bg-secondary/80 transition-colors"
-          >
-            {selectedPlayer ? selectedPlayer.name : `Select ${label}...`}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
-          <Command className="border border-muted">
-            <CommandInput 
-              placeholder={`Search ${label}...`}
-              value={searchTerm}
-              onValueChange={onSearchChange}
-              className="border-muted"
-            />
-            <CommandEmpty className="text-muted-foreground">No player found.</CommandEmpty>
-            <CommandGroup>
-              {filteredPlayers.map((player) => (
-                <CommandItem
-                  key={player.id}
-                  value={player.name}
-                  onSelect={() => {
-                    onPlayerSelect(player);
-                    setOpen(false);
-                  }}
-                  className="cursor-pointer hover:bg-primary/20"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedPlayer?.id === player.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {player.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <Select
+        value={selectedPlayer?.id}
+        onValueChange={(value) => {
+          const player = players.find((p) => p.id === value);
+          if (player) onPlayerSelect(player);
+        }}
+      >
+        <SelectTrigger className="w-full bg-secondary/50 border-muted hover:bg-secondary/80 transition-colors">
+          <SelectValue placeholder={`Select ${label}...`}>
+            {selectedPlayer?.name}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {players.map((player) => (
+            <SelectItem
+              key={player.id}
+              value={player.id}
+              className="cursor-pointer hover:bg-primary/20"
+            >
+              <div className="flex items-center">
+                <Check
+                  className={cn(
+                    "mr-2 h-4 w-4",
+                    selectedPlayer?.id === player.id ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {player.name}
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 };
