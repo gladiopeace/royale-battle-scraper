@@ -19,7 +19,7 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
   }
 
   const pageUrl = `${url}${page > 1 ? `?page=${page}` : ''}`;
-  const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(pageUrl)}&render_js=1`;
+  const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(pageUrl)}&render_js=1&wait_for=.player_name_header`;
   
   console.log(`Fetching page ${page} from ${pageUrl}`);
   
@@ -32,6 +32,15 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
       }
       
       const html = await response.text();
+      console.log(`Received HTML response (length: ${html.length})`);
+      
+      // Log some content indicators
+      console.log('Content indicators:', {
+        hasBattleSegments: html.includes('ui attached segment'),
+        hasPlayerNames: html.includes('player_name_header'),
+        hasResults: html.includes('result_header'),
+        hasOverlay: html.includes('gdpr-overlay') || html.includes('cookie-consent')
+      });
       
       // Validate the page content
       if (!isValidBattlePage(html)) {
@@ -83,12 +92,14 @@ const scrapeAllPages = async (baseUrl: string) => {
   let totalBattles = 0;
   let hasMore = true;
   let consecutiveEmptyPages = 0;
+  const maxConsecutiveEmptyPages = 2;
+  const maxPages = 10; // Limit total pages to prevent infinite loops
 
-  while (hasMore && consecutiveEmptyPages < 3) {
+  while (hasMore && consecutiveEmptyPages < maxConsecutiveEmptyPages && page <= maxPages) {
     console.log(`Scraping page ${page}`);
     try {
       const html = await fetchWithProxy(baseUrl, page);
-      console.log(`Received HTML response for page ${page} (length: ${html.length})`);
+      console.log(`Successfully fetched page ${page}`);
       
       const battles = extractBattles(html);
       console.log(`Extracted ${battles.length} battles from page ${page}`);
@@ -103,13 +114,22 @@ const scrapeAllPages = async (baseUrl: string) => {
         console.log(`No battles found on page ${page}. Empty pages count: ${consecutiveEmptyPages}`);
       }
 
-      hasMore = hasNextPage(html) && consecutiveEmptyPages < 3;
+      hasMore = hasNextPage(html) && 
+                consecutiveEmptyPages < maxConsecutiveEmptyPages && 
+                page < maxPages;
+                
       if (hasMore) {
         page++;
         console.log(`Moving to page ${page}`);
-        await new Promise(resolve => setTimeout(resolve, 3000)); // Increased delay
+        // Increased delay between pages
+        await new Promise(resolve => setTimeout(resolve, 5000));
       } else {
-        console.log('No more pages to scrape or too many empty pages');
+        console.log('Stopping pagination:', {
+          hasNextPage: hasNextPage(html),
+          consecutiveEmptyPages,
+          currentPage: page,
+          reachedMaxPages: page >= maxPages
+        });
       }
     } catch (error) {
       console.error(`Error scraping page ${page}:`, error);
