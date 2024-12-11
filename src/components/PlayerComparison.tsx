@@ -1,31 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Crown } from "lucide-react";
-
-interface Player {
-  id: string;
-  name: string;
-  total_battles: number;
-  total_crowns: number;
-}
-
-interface Battle {
-  battle_id: string;
-  battle_time: string;
-  type: string;
-  player1_crowns: number;
-  player2_crowns: number;
-}
-
-interface PlayerStats {
-  wins: number;
-  losses: number;
-  ties: number;
-  totalCrowns: number;
-}
+import { Player, Battle, PlayerStats } from "@/types/player";
+import { PlayerSearch } from "./PlayerSearch";
+import { PlayerStatsDisplay } from "./PlayerStats";
+import { BattleHistory } from "./BattleHistory";
 
 const PlayerComparison = () => {
   const [player1Search, setPlayer1Search] = useState("");
@@ -91,127 +70,51 @@ const PlayerComparison = () => {
   return (
     <div className="container mx-auto p-4 space-y-8">
       <div className="grid grid-cols-2 gap-8">
-        {/* Player 1 Selection */}
-        <div className="space-y-4">
-          <Input
-            placeholder="Search Player 1..."
-            value={player1Search}
-            onChange={(e) => setPlayer1Search(e.target.value)}
-          />
-          {players?.filter(p => p.name.toLowerCase().includes(player1Search.toLowerCase()))
-            .map((player) => (
-              <div
-                key={player.id}
-                className={`p-2 cursor-pointer rounded ${
-                  selectedPlayer1?.id === player.id ? "bg-primary text-primary-foreground" : "hover:bg-accent"
-                }`}
-                onClick={() => setSelectedPlayer1(player)}
-              >
-                {player.name}
-              </div>
-            ))}
-        </div>
-
-        {/* Player 2 Selection */}
-        <div className="space-y-4">
-          <Input
-            placeholder="Search Player 2..."
-            value={player2Search}
-            onChange={(e) => setPlayer2Search(e.target.value)}
-          />
-          {players?.filter(p => p.name.toLowerCase().includes(player2Search.toLowerCase()))
-            .map((player) => (
-              <div
-                key={player.id}
-                className={`p-2 cursor-pointer rounded ${
-                  selectedPlayer2?.id === player.id ? "bg-primary text-primary-foreground" : "hover:bg-accent"
-                }`}
-                onClick={() => setSelectedPlayer2(player)}
-              >
-                {player.name}
-              </div>
-            ))}
-        </div>
+        <PlayerSearch
+          searchTerm={player1Search}
+          onSearchChange={setPlayer1Search}
+          players={players}
+          selectedPlayer={selectedPlayer1}
+          onPlayerSelect={setSelectedPlayer1}
+          label="Player 1"
+        />
+        <PlayerSearch
+          searchTerm={player2Search}
+          onSearchChange={setPlayer2Search}
+          players={players}
+          selectedPlayer={selectedPlayer2}
+          onPlayerSelect={setSelectedPlayer2}
+          label="Player 2"
+        />
       </div>
 
-      {/* Stats Display */}
       {selectedPlayer1 && selectedPlayer2 && (
-        <div className="grid grid-cols-2 gap-8">
-          {/* Player 1 Stats */}
-          <div className="space-y-4">
-            <h3 className="text-2xl font-bold flex items-center gap-2">
-              {selectedPlayer1.name}
-              {getWinner() === 1 && (
-                <Crown className="h-6 w-6 text-yellow-500 animate-bounce" />
-              )}
-            </h3>
+        <>
+          <div className="grid grid-cols-2 gap-8">
             {player1Stats && (
-              <div className="space-y-2">
-                <p>Wins: {player1Stats.wins}</p>
-                <p>Losses: {player1Stats.losses}</p>
-                <p>Ties: {player1Stats.ties}</p>
-                <p>Total Crowns: {player1Stats.totalCrowns}</p>
-              </div>
+              <PlayerStatsDisplay
+                player={selectedPlayer1}
+                stats={player1Stats}
+                isWinner={getWinner() === 1}
+              />
             )}
-          </div>
-
-          {/* Player 2 Stats */}
-          <div className="space-y-4">
-            <h3 className="text-2xl font-bold flex items-center gap-2">
-              {selectedPlayer2.name}
-              {getWinner() === 2 && (
-                <Crown className="h-6 w-6 text-yellow-500 animate-bounce" />
-              )}
-            </h3>
             {player2Stats && (
-              <div className="space-y-2">
-                <p>Wins: {player2Stats.wins}</p>
-                <p>Losses: {player2Stats.losses}</p>
-                <p>Ties: {player2Stats.ties}</p>
-                <p>Total Crowns: {player2Stats.totalCrowns}</p>
-              </div>
+              <PlayerStatsDisplay
+                player={selectedPlayer2}
+                stats={player2Stats}
+                isWinner={getWinner() === 2}
+              />
             )}
           </div>
-        </div>
-      )}
 
-      {/* Battle History */}
-      {battles && battles.length > 0 && (
-        <div className="mt-8">
-          <h3 className="text-xl font-bold mb-4">Battle History</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>{selectedPlayer1?.name} Crowns</TableHead>
-                <TableHead>{selectedPlayer2?.name} Crowns</TableHead>
-                <TableHead>Winner</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {battles.map((battle) => {
-                const isPlayer1First = battle.player1_id === selectedPlayer1?.id;
-                const player1Crowns = isPlayer1First ? battle.player1_crowns : battle.player2_crowns;
-                const player2Crowns = isPlayer1First ? battle.player2_crowns : battle.player1_crowns;
-                
-                return (
-                  <TableRow key={battle.battle_id}>
-                    <TableCell>{new Date(battle.battle_time).toLocaleDateString()}</TableCell>
-                    <TableCell>{battle.type}</TableCell>
-                    <TableCell>{player1Crowns}</TableCell>
-                    <TableCell>{player2Crowns}</TableCell>
-                    <TableCell>
-                      {player1Crowns > player2Crowns ? selectedPlayer1?.name :
-                       player2Crowns > player1Crowns ? selectedPlayer2?.name :
-                       "Tie"}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+          {battles && battles.length > 0 && (
+            <BattleHistory
+              battles={battles}
+              player1={selectedPlayer1}
+              player2={selectedPlayer2}
+            />
+          )}
+        </>
       )}
     </div>
   );
