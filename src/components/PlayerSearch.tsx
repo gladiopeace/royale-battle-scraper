@@ -28,15 +28,15 @@ interface PlayerSearchProps {
 export const PlayerSearch = ({
   searchTerm,
   onSearchChange,
-  players = [],
+  players,
   selectedPlayer,
   onPlayerSelect,
   label,
 }: PlayerSearchProps) => {
   const [open, setOpen] = useState(false);
 
-  // Ensure we always have an array to work with
-  const filteredPlayers = players.filter(p => 
+  // Ensure we always have an array to work with and filter it
+  const filteredPlayers = (players || []).filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -55,7 +55,7 @@ export const PlayerSearch = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
+        <PopoverContent className="w-full p-0" align="start">
           <Command className="border border-muted">
             <CommandInput 
               placeholder={`Search ${label}...`}
