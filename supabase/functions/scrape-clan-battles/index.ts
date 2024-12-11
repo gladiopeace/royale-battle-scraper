@@ -19,12 +19,13 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
   }
 
   const pageUrl = `${url}${page > 1 ? `?page=${page}` : ''}`;
-  const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(pageUrl)}&render_js=1&wait_for=.player_name_header,.result_header`;
+  const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(pageUrl)}&render_js=1&wait_for=.player_name_header,.result_header&wait_for_timeout=180000`;
   
   console.log(`Fetching page ${page} from ${pageUrl}`);
   
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
+      console.log(`Attempt ${attempt}: Waiting for page load and ad handling...`);
       const response = await fetch(proxyUrl);
       
       if (!response.ok) {
@@ -42,9 +43,16 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
         hasOverlay: html.includes('gdpr-overlay') || html.includes('cookie-consent'),
         hasPagination: html.includes('pagination'),
         hasNextButton: html.includes('next page') || html.includes('item next'),
+        hasAds: html.includes('advertisement') || html.includes('ad-overlay'),
       };
       
       console.log('Content indicators:', contentIndicators);
+      
+      // Wait additional time if ads or overlays are detected
+      if (contentIndicators.hasAds || contentIndicators.hasOverlay) {
+        console.log('Detected ads or overlays, extending wait time...');
+        await new Promise(resolve => setTimeout(resolve, 10000));
+      }
       
       // Validate the page content
       if (!isValidBattlePage(html)) {
@@ -52,7 +60,7 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
         if (attempt === retries) {
           throw new Error('Maximum retries reached for invalid page content');
         }
-        await new Promise(resolve => setTimeout(resolve, 3000 * attempt));
+        await new Promise(resolve => setTimeout(resolve, 10000 * attempt));
         continue;
       }
       
@@ -60,7 +68,7 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
     } catch (error) {
       console.error(`Attempt ${attempt} failed:`, error);
       if (attempt === retries) throw error;
-      await new Promise(resolve => setTimeout(resolve, 3000 * attempt));
+      await new Promise(resolve => setTimeout(resolve, 10000 * attempt));
     }
   }
   
@@ -102,6 +110,10 @@ const scrapeAllPages = async (baseUrl: string) => {
   while (hasMore && consecutiveEmptyPages < maxConsecutiveEmptyPages && page <= maxPages) {
     console.log(`Scraping page ${page}`);
     try {
+      // Initial wait before fetching each page
+      console.log('Waiting for page to fully load (3 minutes)...');
+      await new Promise(resolve => setTimeout(resolve, 180000)); // 3 minutes wait
+      
       const html = await fetchWithProxy(baseUrl, page);
       console.log(`Successfully fetched page ${page}`);
       
@@ -128,8 +140,8 @@ const scrapeAllPages = async (baseUrl: string) => {
       if (hasMore) {
         page++;
         console.log(`Moving to page ${page}`);
-        // Increased delay between pages
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Extended delay between pages
+        await new Promise(resolve => setTimeout(resolve, 30000));
       } else {
         console.log('Stopping pagination:', {
           hasNextPage: nextPageExists,
