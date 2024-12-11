@@ -24,9 +24,24 @@ export const processBattleBlock = (block: string, index: number): Battle | null 
   }
 
   const playerData = extractPlayerData(block);
-  if (!playerData.player1Name || !playerData.player2Name || 
-      playerData.player1Crowns === null || playerData.player2Crowns === null) {
-    console.log(`Missing player data for battle ${battleId}`);
+  
+  // Log detailed information about the extracted data
+  console.log(`Battle ${battleId} extracted data:`, {
+    battleId,
+    playerData,
+    blockLength: block.length,
+    hasPlayerNames: Boolean(playerData.player1Name && playerData.player2Name),
+    hasCrowns: Boolean(playerData.player1Crowns !== null && playerData.player2Crowns !== null)
+  });
+
+  // Validate all required fields
+  if (!playerData.player1Name || !playerData.player2Name) {
+    console.log(`Missing player names for battle ${battleId}`);
+    return null;
+  }
+
+  if (playerData.player1Crowns === null || playerData.player2Crowns === null) {
+    console.log(`Missing crown data for battle ${battleId}`);
     return null;
   }
 
@@ -43,7 +58,7 @@ export const processBattleBlock = (block: string, index: number): Battle | null 
     player2_clan: playerData.player2Clan
   };
 
-  console.log(`Successfully processed battle ${battleId}`);
+  console.log(`Successfully processed battle ${battleId}:`, battle);
   return battle;
 };
 
@@ -59,7 +74,7 @@ export const saveBattlesToSupabase = async (battles: Battle[]) => {
       const { player1_name, player2_name, player1_clan, player2_clan, ...battleData } = battle;
 
       // Upsert player 1
-      const { data: player1 } = await supabase
+      const { data: player1, error: player1Error } = await supabase
         .from('players')
         .upsert({ 
           id: player1_name, 
@@ -69,8 +84,13 @@ export const saveBattlesToSupabase = async (battles: Battle[]) => {
         .select()
         .single();
 
+      if (player1Error) {
+        console.error('Error upserting player 1:', player1Error);
+        continue;
+      }
+
       // Upsert player 2
-      const { data: player2 } = await supabase
+      const { data: player2, error: player2Error } = await supabase
         .from('players')
         .upsert({ 
           id: player2_name, 
@@ -79,6 +99,11 @@ export const saveBattlesToSupabase = async (battles: Battle[]) => {
         })
         .select()
         .single();
+
+      if (player2Error) {
+        console.error('Error upserting player 2:', player2Error);
+        continue;
+      }
 
       if (player1 && player2) {
         const { error: battleError } = await supabase
@@ -91,6 +116,8 @@ export const saveBattlesToSupabase = async (battles: Battle[]) => {
 
         if (battleError) {
           console.error('Error inserting battle:', battleError);
+        } else {
+          console.log(`Successfully saved battle ${battle.battle_id}`);
         }
       }
     } catch (error) {
@@ -102,5 +129,7 @@ export const saveBattlesToSupabase = async (battles: Battle[]) => {
   const { error: updateError } = await supabase.rpc('update_player_stats');
   if (updateError) {
     console.error('Error updating player stats:', updateError);
+  } else {
+    console.log('Successfully updated player stats');
   }
 };

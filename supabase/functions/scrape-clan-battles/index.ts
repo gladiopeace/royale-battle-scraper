@@ -21,8 +21,13 @@ const fetchWithProxy = async (url: string, page = 1) => {
   const pageUrl = `${url}${page > 1 ? `?page=${page}` : ''}`;
   const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(pageUrl)}`;
   
-  console.log(`Fetching page ${page}`);
+  console.log(`Fetching page ${page} from ${pageUrl}`);
   const response = await fetch(proxyUrl);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch page ${page}: ${response.status} ${response.statusText}`);
+  }
+  
   return response.text();
 };
 
@@ -33,9 +38,11 @@ const extractBattles = (html: string): Battle[] => {
   
   battleBlocks.slice(1).forEach((block, index) => {
     try {
+      console.log(`Processing battle block ${index + 1} (length: ${block.length})`);
       const battle = processBattleBlock(block, index);
       if (battle) {
         battles.push(battle);
+        console.log(`Successfully extracted battle ${battle.battle_id}`);
       } else {
         console.log(`Skipping battle ${index + 1} due to missing required data`);
       }
@@ -55,18 +62,30 @@ const scrapeAllPages = async (baseUrl: string) => {
 
   while (hasMore) {
     console.log(`Scraping page ${page}`);
-    const html = await fetchWithProxy(baseUrl, page);
-    const battles = extractBattles(html);
-    
-    if (battles.length > 0) {
-      await saveBattlesToSupabase(battles);
-      totalBattles += battles.length;
-    }
+    try {
+      const html = await fetchWithProxy(baseUrl, page);
+      console.log(`Received HTML response for page ${page} (length: ${html.length})`);
+      
+      const battles = extractBattles(html);
+      console.log(`Extracted ${battles.length} battles from page ${page}`);
+      
+      if (battles.length > 0) {
+        await saveBattlesToSupabase(battles);
+        totalBattles += battles.length;
+        console.log(`Saved ${battles.length} battles from page ${page}`);
+      }
 
-    hasMore = hasNextPage(html) && battles.length > 0;
-    if (hasMore) {
-      page++;
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      hasMore = hasNextPage(html) && battles.length > 0;
+      if (hasMore) {
+        page++;
+        console.log(`Moving to page ${page}`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } else {
+        console.log('No more pages to scrape');
+      }
+    } catch (error) {
+      console.error(`Error scraping page ${page}:`, error);
+      hasMore = false;
     }
   }
 

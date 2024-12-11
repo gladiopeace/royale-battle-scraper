@@ -23,18 +23,37 @@ export const extractPlayerData = (block: string): {
   player1Crowns: number | null;
   player2Crowns: number | null;
 } => {
-  const player1NameMatch = block.match(/player_name_header.*?>([^<]+)</);
-  const player2NameMatch = block.match(/player_name_header.*?>([^<]+)<\/a>[^<]*<\/div>[^<]*<div[^>]*>[^<]*<a[^>]*>([^<]+)</);
-  const crownMatches = block.match(/result_header.*?>.*?(\d+)\s*-\s*(\d+)/s);
-  const clanMatches = block.match(/battle_player_clan.*?>([^<]+)</g);
+  // Extract player names using more specific selectors
+  const playerMatches = block.match(/<div class="player_name_header[^>]*>.*?<a[^>]*>([^<]+)<\/a>/g);
+  const player1Name = playerMatches?.[0]?.match(/>([^<]+)</)?.[1]?.trim() || null;
+  const player2Name = playerMatches?.[1]?.match(/>([^<]+)</)?.[1]?.trim() || null;
+
+  // Extract clan names
+  const clanMatches = block.match(/<div class="battle_player_clan[^>]*>([^<]+)<\/div>/g);
+  const player1Clan = clanMatches?.[0]?.match(/>([^<]+)</)?.[1]?.trim() || null;
+  const player2Clan = clanMatches?.[1]?.match(/>([^<]+)</)?.[1]?.trim() || null;
+
+  // Extract crowns using a more specific pattern
+  const crownMatches = block.match(/<div class="result_header[^>]*>.*?(\d+)\s*-\s*(\d+)/s);
+  const player1Crowns = crownMatches ? parseInt(crownMatches[1]) : null;
+  const player2Crowns = crownMatches ? parseInt(crownMatches[2]) : null;
+
+  console.log('Extracted player data:', {
+    player1Name,
+    player2Name,
+    player1Clan,
+    player2Clan,
+    player1Crowns,
+    player2Crowns
+  });
 
   return {
-    player1Name: player1NameMatch ? player1NameMatch[1].trim() : null,
-    player2Name: player2NameMatch ? player2NameMatch[2].trim() : null,
-    player1Clan: clanMatches ? clanMatches[0].match(/>([^<]+)</)?.[1].trim() : null,
-    player2Clan: clanMatches && clanMatches[1] ? clanMatches[1].match(/>([^<]+)</)?.[1].trim() : null,
-    player1Crowns: crownMatches ? parseInt(crownMatches[1]) : null,
-    player2Crowns: crownMatches ? parseInt(crownMatches[2]) : null
+    player1Name,
+    player2Name,
+    player1Clan,
+    player2Clan,
+    player1Crowns,
+    player2Crowns
   };
 };
 
