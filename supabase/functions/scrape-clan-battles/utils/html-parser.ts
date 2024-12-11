@@ -36,41 +36,27 @@ export const extractPlayerData = (block: string) => {
 };
 
 export const hasNextPage = (html: string): boolean => {
-  const nextPageIndicators = [
-    'class="item next"',
-    'class="next page"',
-    'class="pagination".*?Next',
-    'class="[^"]*pagination[^"]*".*?\\bnext\\b'
-  ];
-  
-  return nextPageIndicators.some(indicator => 
-    new RegExp(indicator, 'i').test(html)
-  );
+  return html.includes('class="item next"') || 
+         html.includes('class="next page"') ||
+         html.includes('class="pagination"') && html.includes('Next');
 };
 
 export const isValidBattlePage = (html: string): boolean => {
-  const requiredElements = {
-    hasBattleContent: html.includes('battle_') && html.includes('crowns'),
-    hasPlayerNames: html.includes('player_name_header'),
-    hasResults: html.includes('result_header'),
-    hasValidStructure: html.includes('ui attached segment'),
-  };
-
-  const blockingElements = {
-    hasGdprOverlay: html.includes('gdpr-overlay'),
-    hasCookieConsent: html.includes('cookie-consent'),
-    hasAdOverlay: html.includes('ad-overlay'),
-    hasAdvertisement: html.includes('advertisement'),
-    hasMaintenanceMode: html.includes('maintenance-mode'),
-  };
-
+  // Check for essential content indicators
+  const hasContent = html.includes('battle_') && 
+                    html.includes('player_name_header') && 
+                    html.includes('result_header');
+                    
+  // Check for blocking elements
+  const hasBlockers = html.includes('gdpr-overlay') || 
+                     html.includes('cookie-consent') ||
+                     html.includes('ad-overlay');
+                     
   console.log('Page validation:', {
-    requiredElements,
-    blockingElements,
-    htmlLength: html.length,
+    hasContent,
+    hasBlockers,
+    htmlLength: html.length
   });
 
-  const hasRequiredElements = Object.values(requiredElements).some(v => v);
-  
-  return hasRequiredElements;
+  return hasContent && !hasBlockers;
 };

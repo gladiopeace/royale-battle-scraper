@@ -1,14 +1,20 @@
+// Import required utilities
 import { processBattleBlock, saveBattlesToSupabase, Battle } from './utils/battle-processor.ts';
 import { hasNextPage, isValidBattlePage } from './utils/html-parser.ts';
 
+// Define CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Handle CORS preflight requests
 const handleCors = (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 204
+    });
   }
 };
 
@@ -26,7 +32,12 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       console.log(`Attempt ${attempt}: Waiting for page load and ad handling...`);
-      const response = await fetch(proxyUrl);
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Accept': 'text/html',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch page ${page}: ${response.status} ${response.statusText}`);
@@ -35,26 +46,6 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
       const html = await response.text();
       console.log(`Received HTML response (length: ${html.length})`);
       
-      // Enhanced content validation logging
-      const contentIndicators = {
-        hasBattleSegments: html.includes('ui attached segment'),
-        hasPlayerNames: html.includes('player_name_header'),
-        hasResults: html.includes('result_header'),
-        hasOverlay: html.includes('gdpr-overlay') || html.includes('cookie-consent'),
-        hasPagination: html.includes('pagination'),
-        hasNextButton: html.includes('next page') || html.includes('item next'),
-        hasAds: html.includes('advertisement') || html.includes('ad-overlay'),
-      };
-      
-      console.log('Content indicators:', contentIndicators);
-      
-      // Wait additional time if ads or overlays are detected
-      if (contentIndicators.hasAds || contentIndicators.hasOverlay) {
-        console.log('Detected ads or overlays, extending wait time...');
-        await new Promise(resolve => setTimeout(resolve, 10000));
-      }
-      
-      // Validate the page content
       if (!isValidBattlePage(html)) {
         console.log(`Invalid battle page content on attempt ${attempt}, retrying...`);
         if (attempt === retries) {
@@ -159,7 +150,9 @@ const scrapeAllPages = async (baseUrl: string) => {
   return totalBattles;
 };
 
-Deno.serve(async (req) => {
+// Main function handler with proper error handling and CORS
+Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
@@ -171,16 +164,31 @@ Deno.serve(async (req) => {
     console.log('Completed scraping. Total battles processed:', totalBattles);
 
     return new Response(
-      JSON.stringify({ success: true, battlesProcessed: totalBattles }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: true, 
+        battlesProcessed: totalBattles 
+      }),
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json'
+        } 
+      }
     );
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in edge function:', error);
+    
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json'
+        } 
       }
     );
   }
