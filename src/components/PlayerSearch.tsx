@@ -28,12 +28,17 @@ interface PlayerSearchProps {
 export const PlayerSearch = ({
   searchTerm,
   onSearchChange,
-  players,
+  players = [], // Provide default empty array
   selectedPlayer,
   onPlayerSelect,
   label,
 }: PlayerSearchProps) => {
   const [open, setOpen] = useState(false);
+
+  // Filter players only if players array exists
+  const filteredPlayers = players?.filter(p => 
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   return (
     <div className="flex flex-col space-y-2">
@@ -60,9 +65,7 @@ export const PlayerSearch = ({
             />
             <CommandEmpty className="text-muted-foreground">No player found.</CommandEmpty>
             <CommandGroup>
-              {players?.filter(p => 
-                p.name.toLowerCase().includes(searchTerm.toLowerCase())
-              ).map((player) => (
+              {filteredPlayers.map((player) => (
                 <CommandItem
                   key={player.id}
                   value={player.name}
