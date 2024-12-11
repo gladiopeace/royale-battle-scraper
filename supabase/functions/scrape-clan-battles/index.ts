@@ -24,33 +24,42 @@ const fetchWithProxy = async (url: string) => {
 };
 
 const extractBattles = (html: string) => {
-  // Basic extraction using string manipulation since we can't use DOM parsing in Deno
   const battles: any[] = [];
-  const battleBlocks = html.split('class="battles_row"');
+  const battleBlocks = html.split('class="ui attached segment');
   
   battleBlocks.slice(1).forEach((block) => {
     try {
-      // Extract battle time
-      const timeMatch = block.match(/datetime="([^"]+)"/);
-      const battleTime = timeMatch ? timeMatch[1] : null;
+      // Extract battle ID
+      const idMatch = block.match(/battle_(\d+\.\d+)/);
+      const battleId = idMatch ? idMatch[1] : `battle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // Extract battle type
-      const typeMatch = block.match(/battle_type.*?>([^<]+)</);
+      const typeMatch = block.match(/game_mode_header.*?>([^<]+)</);
       const type = typeMatch ? typeMatch[1].trim() : 'Unknown';
 
-      // Extract player names and crowns
-      const playerMatches = block.match(/player_name.*?>([^<]+)</g);
-      const crownMatches = block.match(/crowns.*?>(\d+)</g);
+      // Extract battle time from timestamp attribute
+      const timeMatch = block.match(/data-timestamp="(\d+\.\d+)"/);
+      const battleTime = timeMatch 
+        ? new Date(parseFloat(timeMatch[1]) * 1000).toISOString()
+        : new Date().toISOString();
 
-      if (playerMatches && playerMatches.length >= 2 && crownMatches && crownMatches.length >= 2) {
-        const player1Name = playerMatches[0].match(/>([^<]+)</)[1];
-        const player2Name = playerMatches[1].match(/>([^<]+)</)[1];
-        const player1Crowns = parseInt(crownMatches[0].match(/(\d+)/)[1]);
-        const player2Crowns = parseInt(crownMatches[1].match(/(\d+)/)[1]);
+      // Extract player names and clans
+      const playerMatches = block.match(/player_name_header.*?>([^<]+)</g);
+      const clanMatches = block.match(/battle_player_clan.*?>([^<]+)</g);
+      
+      // Extract crowns from the result header
+      const crownMatches = block.match(/result_header.*?(\d+)\s*-\s*(\d+)/);
 
-        // Extract battle ID (using timestamp as fallback)
-        const idMatch = block.match(/battle_id="([^"]+)"/);
-        const battleId = idMatch ? idMatch[1] : `battle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      if (playerMatches && playerMatches.length >= 2 && crownMatches) {
+        const player1Name = playerMatches[0].match(/>([^<]+)</)[1].trim();
+        const player2Name = playerMatches[1].match(/>([^<]+)</)[1].trim();
+        const player1Clan = clanMatches ? clanMatches[0].match(/>([^<]+)</)[1].trim() : null;
+        const player2Clan = clanMatches && clanMatches[1] ? clanMatches[1].match(/>([^<]+)</)[1].trim() : null;
+        const player1Crowns = parseInt(crownMatches[1]);
+        const player2Crowns = parseInt(crownMatches[2]);
+
+        // Check if it's a friendly battle
+        const isFriendly = block.includes('battle_icon_centered_v3__is_clan_friendly');
 
         battles.push({
           battle_id: battleId,
@@ -60,8 +69,12 @@ const extractBattles = (html: string) => {
           player2_name: player2Name,
           player1_crowns,
           player2_crowns,
-          is_friendly_battle: type.toLowerCase().includes('friendly')
+          is_friendly_battle: isFriendly
         });
+
+        // Also update clan information for players
+        battles[battles.length - 1].player1_clan = player1Clan;
+        battles[battles.length - 1].player2_clan = player2Clan;
       }
     } catch (error) {
       console.error('Error parsing battle block:', error);
@@ -80,20 +93,27 @@ const saveBattlesToSupabase = async (battles: any[]) => {
 
   for (const battle of battles) {
     try {
-      // First ensure both players exist
-      const { player1_name, player2_name, ...battleData } = battle;
+      const { player1_name, player2_name, player1_clan, player2_clan, ...battleData } = battle;
 
-      // Upsert player 1
+      // Upsert player 1 with clan info
       const { data: player1 } = await supabase
         .from('players')
-        .upsert({ id: player1_name, name: player1_name })
+        .upsert({ 
+          id: player1_name, 
+          name: player1_name,
+          clan_name: player1_clan 
+        })
         .select()
         .single();
 
-      // Upsert player 2
+      // Upsert player 2 with clan info
       const { data: player2 } = await supabase
         .from('players')
-        .upsert({ id: player2_name, name: player2_name })
+        .upsert({ 
+          id: player2_name, 
+          name: player2_name,
+          clan_name: player2_clan 
+        })
         .select()
         .single();
 
