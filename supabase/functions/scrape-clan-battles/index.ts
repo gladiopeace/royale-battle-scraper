@@ -25,29 +25,42 @@ Deno.serve(async (req: Request) => {
       throw new Error('SCRAPEOPS_API_KEY is not set');
     }
 
-    // Initial page fetch with extended timeout
-    console.log('Waiting for initial page load (3 minutes)...');
-    await new Promise(resolve => setTimeout(resolve, 180000)); // 3 minutes wait
-
-    const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(url)}&render_js=1&wait_for=.player_name_header,.result_header&wait_for_timeout=180000`;
+    // Set up the proxy URL with specific wait-for selectors
+    const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(url)}&render_js=1&wait_for=.player_name_header,.result_header`;
     
-    const response = await fetch(proxyUrl, {
-      headers: {
-        'Accept': 'text/html',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    // Function to check if page has loaded
+    const checkPageLoad = async (maxAttempts = 36): Promise<string> => { // 36 attempts * 5 seconds = 3 minutes max
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        console.log(`Attempt ${attempt + 1} of ${maxAttempts} to fetch page...`);
+        
+        const response = await fetch(proxyUrl, {
+          headers: {
+            'Accept': 'text/html',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
+        });
+
+        if (!response.ok) {
+          console.log(`Attempt ${attempt + 1}: Response not OK (${response.status})`);
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between attempts
+          continue;
+        }
+
+        const html = await response.text();
+        if (isValidBattlePage(html)) {
+          console.log('Valid page content found!');
+          return html;
+        }
+
+        console.log(`Attempt ${attempt + 1}: Page not yet valid, waiting...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
-    });
+      throw new Error('Failed to load valid page content after maximum attempts');
+    };
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
-    }
-
-    const html = await response.text();
-    console.log(`Received HTML response (length: ${html.length})`);
-
-    if (!isValidBattlePage(html)) {
-      throw new Error('Invalid page content received');
-    }
+    // Get the page content
+    const html = await checkPageLoad();
+    console.log(`Received valid HTML response (length: ${html.length})`);
 
     // Process battles from the page
     const battles = html.split('class="ui attached segment')
