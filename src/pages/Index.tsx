@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import PlayerComparison from "@/components/PlayerComparison";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +35,7 @@ const Index = () => {
 
   return (
     <div className="container mx-auto p-8">
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-8">
         <h1 className="text-3xl font-bold">Clash Royale Battle Tracker</h1>
         <Button 
           onClick={handleScrape} 
@@ -42,6 +43,8 @@ const Index = () => {
         >
           {isLoading ? "Scraping..." : "Scrape Latest Battles"}
         </Button>
+        
+        <PlayerComparison />
       </div>
     </div>
   );

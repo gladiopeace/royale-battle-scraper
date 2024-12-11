@@ -87,11 +87,36 @@ export type Database = {
         }
         Relationships: []
       }
+      scrape_monitoring: {
+        Row: {
+          consecutive_empty_scrapes: number | null
+          id: number
+          is_active_period: boolean | null
+          last_scrape: string | null
+        }
+        Insert: {
+          consecutive_empty_scrapes?: number | null
+          id?: number
+          is_active_period?: boolean | null
+          last_scrape?: string | null
+        }
+        Update: {
+          consecutive_empty_scrapes?: number | null
+          id?: number
+          is_active_period?: boolean | null
+          last_scrape?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      manage_scrape_schedule: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       update_player_stats: {
         Args: Record<PropertyKey, never>
         Returns: undefined
