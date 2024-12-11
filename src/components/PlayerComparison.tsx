@@ -16,6 +16,8 @@ const PlayerComparison = () => {
   const { data: players = [] } = useQuery({
     queryKey: ["players", player1Search, player2Search],
     queryFn: async () => {
+      if (!player1Search && !player2Search) return [];
+      
       const { data, error } = await supabase
         .from("players")
         .select("*")

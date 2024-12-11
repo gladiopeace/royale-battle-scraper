@@ -36,7 +36,7 @@ export const PlayerSearch = ({
   const [open, setOpen] = useState(false);
 
   // Ensure we always have an array to work with and filter it
-  const filteredPlayers = (players || []).filter(p => 
+  const filteredPlayers = (players || []).filter((p) => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
