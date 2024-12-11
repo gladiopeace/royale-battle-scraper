@@ -12,30 +12,40 @@ const PlayerComparison = () => {
   const [selectedPlayer1, setSelectedPlayer1] = useState<Player | null>(null);
   const [selectedPlayer2, setSelectedPlayer2] = useState<Player | null>(null);
 
-  // Query players for search
-  const { data: players } = useQuery({
+  // Query players for search with proper error handling
+  const { data: players = [] } = useQuery({
     queryKey: ["players", player1Search, player2Search],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("players")
         .select("*")
         .or(`name.ilike.%${player1Search}%,name.ilike.%${player2Search}%`)
         .order("name");
-      return data as Player[];
+      
+      if (error) {
+        console.error("Error fetching players:", error);
+        return [];
+      }
+      return data || [];
     },
   });
 
-  // Query battles between selected players
-  const { data: battles } = useQuery({
+  // Query battles between selected players with proper error handling
+  const { data: battles = [] } = useQuery({
     queryKey: ["battles", selectedPlayer1?.id, selectedPlayer2?.id],
     queryFn: async () => {
-      if (!selectedPlayer1?.id || !selectedPlayer2?.id) return null;
-      const { data } = await supabase
+      if (!selectedPlayer1?.id || !selectedPlayer2?.id) return [];
+      const { data, error } = await supabase
         .from("battles")
         .select("*")
         .or(`and(player1_id.eq.${selectedPlayer1.id},player2_id.eq.${selectedPlayer2.id}),and(player1_id.eq.${selectedPlayer2.id},player2_id.eq.${selectedPlayer1.id})`)
         .order("battle_time", { ascending: false });
-      return data as Battle[];
+      
+      if (error) {
+        console.error("Error fetching battles:", error);
+        return [];
+      }
+      return data || [];
     },
     enabled: !!selectedPlayer1?.id && !!selectedPlayer2?.id,
   });

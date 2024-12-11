@@ -19,7 +19,7 @@ import { useState } from "react";
 interface PlayerSearchProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  players: Player[] | undefined;
+  players: Player[];
   selectedPlayer: Player | null;
   onPlayerSelect: (player: Player) => void;
   label: string;
@@ -28,17 +28,17 @@ interface PlayerSearchProps {
 export const PlayerSearch = ({
   searchTerm,
   onSearchChange,
-  players = [], // Provide default empty array
+  players = [],
   selectedPlayer,
   onPlayerSelect,
   label,
 }: PlayerSearchProps) => {
   const [open, setOpen] = useState(false);
 
-  // Filter players only if players array exists
-  const filteredPlayers = players?.filter(p => 
+  // Ensure we always have an array to work with
+  const filteredPlayers = players.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  );
 
   return (
     <div className="flex flex-col space-y-2">
