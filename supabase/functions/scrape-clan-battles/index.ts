@@ -19,7 +19,7 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
   }
 
   const pageUrl = `${url}${page > 1 ? `?page=${page}` : ''}`;
-  const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(pageUrl)}&render_js=1&wait_for=.player_name_header`;
+  const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(pageUrl)}&render_js=1&wait_for=.player_name_header,.result_header`;
   
   console.log(`Fetching page ${page} from ${pageUrl}`);
   
@@ -34,13 +34,17 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
       const html = await response.text();
       console.log(`Received HTML response (length: ${html.length})`);
       
-      // Log some content indicators
-      console.log('Content indicators:', {
+      // Enhanced content validation logging
+      const contentIndicators = {
         hasBattleSegments: html.includes('ui attached segment'),
         hasPlayerNames: html.includes('player_name_header'),
         hasResults: html.includes('result_header'),
-        hasOverlay: html.includes('gdpr-overlay') || html.includes('cookie-consent')
-      });
+        hasOverlay: html.includes('gdpr-overlay') || html.includes('cookie-consent'),
+        hasPagination: html.includes('pagination'),
+        hasNextButton: html.includes('next page') || html.includes('item next'),
+      };
+      
+      console.log('Content indicators:', contentIndicators);
       
       // Validate the page content
       if (!isValidBattlePage(html)) {
@@ -48,7 +52,7 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
         if (attempt === retries) {
           throw new Error('Maximum retries reached for invalid page content');
         }
-        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+        await new Promise(resolve => setTimeout(resolve, 3000 * attempt));
         continue;
       }
       
@@ -56,7 +60,7 @@ const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
     } catch (error) {
       console.error(`Attempt ${attempt} failed:`, error);
       if (attempt === retries) throw error;
-      await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+      await new Promise(resolve => setTimeout(resolve, 3000 * attempt));
     }
   }
   
@@ -92,8 +96,8 @@ const scrapeAllPages = async (baseUrl: string) => {
   let totalBattles = 0;
   let hasMore = true;
   let consecutiveEmptyPages = 0;
-  const maxConsecutiveEmptyPages = 2;
-  const maxPages = 10; // Limit total pages to prevent infinite loops
+  const maxConsecutiveEmptyPages = 3;
+  const maxPages = 10;
 
   while (hasMore && consecutiveEmptyPages < maxConsecutiveEmptyPages && page <= maxPages) {
     console.log(`Scraping page ${page}`);
@@ -114,7 +118,10 @@ const scrapeAllPages = async (baseUrl: string) => {
         console.log(`No battles found on page ${page}. Empty pages count: ${consecutiveEmptyPages}`);
       }
 
-      hasMore = hasNextPage(html) && 
+      const nextPageExists = hasNextPage(html);
+      console.log('Next page check:', { nextPageExists, currentPage: page });
+      
+      hasMore = nextPageExists && 
                 consecutiveEmptyPages < maxConsecutiveEmptyPages && 
                 page < maxPages;
                 
@@ -125,7 +132,7 @@ const scrapeAllPages = async (baseUrl: string) => {
         await new Promise(resolve => setTimeout(resolve, 5000));
       } else {
         console.log('Stopping pagination:', {
-          hasNextPage: hasNextPage(html),
+          hasNextPage: nextPageExists,
           consecutiveEmptyPages,
           currentPage: page,
           reachedMaxPages: page >= maxPages

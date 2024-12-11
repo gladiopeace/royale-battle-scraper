@@ -16,15 +16,16 @@ export const extractBattleType = (block: string): string => {
 };
 
 export const extractPlayerData = (block: string) => {
-  // More specific selectors for player data
-  const namePattern = /<div class="player_name_header[^>]*>.*?<a[^>]*>([^<]+)<\/a>/gs;
+  // Updated selectors for better player data extraction
+  const namePattern = /<div[^>]*class="[^"]*player_name_header[^"]*"[^>]*>.*?<a[^>]*>([^<]+)<\/a>/gs;
   const names = [...block.matchAll(namePattern)].map(match => match[1].trim());
   
-  const clanPattern = /<div class="battle_player_clan[^>]*>([^<]+)<\/div>/gs;
+  const clanPattern = /<div[^>]*class="[^"]*battle_player_clan[^"]*"[^>]*>([^<]+)<\/div>/gs;
   const clans = [...block.matchAll(clanPattern)].map(match => match[1].trim());
   
-  // More specific crown pattern
-  const crownMatch = block.match(/<div class="result_header[^>]*>.*?(\d+)\s*-\s*(\d+)/s);
+  // Updated crown pattern to be more specific
+  const crownPattern = /<div[^>]*class="[^"]*result_header[^"]*"[^>]*>.*?(\d+)\s*-\s*(\d+)/s;
+  const crownMatch = block.match(crownPattern);
 
   return {
     player1Name: names[0] || null,
@@ -37,33 +38,46 @@ export const extractPlayerData = (block: string) => {
 };
 
 export const hasNextPage = (html: string): boolean => {
-  return html.includes('class="item next"') || html.includes('class="next page"');
+  // More specific checks for pagination
+  const nextPageIndicators = [
+    'class="item next"',
+    'class="next page"',
+    'class="pagination".*?Next',
+    'class="[^"]*pagination[^"]*".*?\\bnext\\b'
+  ];
+  
+  return nextPageIndicators.some(indicator => 
+    new RegExp(indicator, 'i').test(html)
+  );
 };
 
 export const isValidBattlePage = (html: string): boolean => {
-  // Check for essential battle page elements
-  const hasBattleContent = html.includes('ui attached segment') && 
-                          html.includes('player_name_header');
+  // Enhanced validation checks
+  const requiredElements = {
+    battleSegments: html.includes('ui attached segment'),
+    playerNames: html.includes('player_name_header'),
+    battleResults: html.includes('result_header'),
+    battleContent: html.includes('battle_') && html.includes('crowns'),
+  };
   
-  // Check for common overlay indicators
-  const hasOverlay = html.includes('gdpr-overlay') || 
-                    html.includes('cookie-consent') ||
-                    html.includes('advertisement');
-                    
-  // Check for error indicators
-  const hasError = html.includes('error-message') ||
-                  html.includes('page-not-found') ||
-                  html.includes('maintenance');
+  // Check for blocking elements
+  const blockingElements = {
+    gdprOverlay: html.includes('gdpr-overlay'),
+    cookieConsent: html.includes('cookie-consent'),
+    adOverlay: html.includes('ad-overlay') || html.includes('advertisement'),
+    maintenanceMode: html.includes('maintenance-mode'),
+  };
   
-  // Log validation results
-  console.log('Page validation:', {
-    hasBattleContent,
-    hasOverlay,
-    hasError,
+  // Log detailed validation results
+  console.log('Page validation results:', {
+    requiredElements,
+    blockingElements,
     htmlLength: html.length,
-    containsBattleKeywords: html.includes('battle') && html.includes('crowns'),
-    containsPlayerInfo: html.includes('player_name_header')
   });
   
-  return hasBattleContent && !hasOverlay && !hasError;
+  // Page is valid if it has required elements and no blocking elements
+  const hasRequiredElements = Object.values(requiredElements).some(v => v);
+  const hasBlockingElements = Object.values(blockingElements).some(v => v);
+  
+  return hasRequiredElements && !hasBlockingElements;
 };
