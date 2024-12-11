@@ -1,5 +1,5 @@
 import { Player } from "@/types/player";
-import { Check, ChevronDown } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -10,8 +10,6 @@ import {
 } from "@/components/ui/select";
 
 interface PlayerSearchProps {
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
   players: Player[];
   selectedPlayer: Player | null;
   onPlayerSelect: (player: Player) => void;
@@ -28,16 +26,14 @@ export const PlayerSearch = ({
     <div className="flex flex-col space-y-2">
       <label className="text-sm font-medium text-muted-foreground">{label}</label>
       <Select
-        value={selectedPlayer?.id}
+        value={selectedPlayer?.id || ""}
         onValueChange={(value) => {
           const player = players.find((p) => p.id === value);
           if (player) onPlayerSelect(player);
         }}
       >
         <SelectTrigger className="w-full bg-secondary/50 border-muted hover:bg-secondary/80 transition-colors">
-          <SelectValue placeholder={`Select ${label}...`}>
-            {selectedPlayer?.name}
-          </SelectValue>
+          <SelectValue placeholder={`Select ${label}...`} />
         </SelectTrigger>
         <SelectContent>
           {players.map((player) => (

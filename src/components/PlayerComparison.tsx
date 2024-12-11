@@ -63,16 +63,12 @@ const PlayerComparison = () => {
           selectedPlayer={player1}
           onPlayerSelect={(player) => handlePlayerSelect(player, true)}
           label="Player 1"
-          searchTerm=""
-          onSearchChange={() => {}}
         />
         <PlayerSearch
           players={players}
           selectedPlayer={player2}
           onPlayerSelect={(player) => handlePlayerSelect(player, false)}
           label="Player 2"
-          searchTerm=""
-          onSearchChange={() => {}}
         />
       </div>
 
