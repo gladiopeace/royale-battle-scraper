@@ -34,22 +34,29 @@ const Index = () => {
   };
 
   return (
-    <div className="container mx-auto p-8">
-      <div className="flex flex-col items-center gap-8">
-        <img 
-          src="https://assets.stickpng.com/images/58595cd74f6ae202fedf2856.png" 
-          alt="Clash Royale Logo" 
-          className="w-64 h-auto mb-4"
-        />
-        <h1 className="text-3xl font-bold">Battle Tracker</h1>
-        <Button 
-          onClick={handleScrape} 
-          disabled={isLoading}
-        >
-          {isLoading ? "Scraping..." : "Scrape Latest Battles"}
-        </Button>
-        
-        <PlayerComparison />
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center gap-8">
+          <img 
+            src="https://supercell.com/images/53c91cc7ddf17d5b6fa13cae4762af1b/main_logo_clashroyale.5e3fbb70__1_.webp" 
+            alt="Clash Royale Logo" 
+            className="w-80 h-auto mb-4 animate-pulse"
+          />
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+            Battle Tracker
+          </h1>
+          <Button 
+            onClick={handleScrape} 
+            disabled={isLoading}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-6 text-lg rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+          >
+            {isLoading ? "Scraping..." : "Scrape Latest Battles"}
+          </Button>
+          
+          <div className="w-full max-w-4xl bg-card/50 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-muted">
+            <PlayerComparison />
+          </div>
+        </div>
       </div>
     </div>
   );

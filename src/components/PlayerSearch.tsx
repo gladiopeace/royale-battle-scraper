@@ -37,27 +37,28 @@ export const PlayerSearch = ({
 
   return (
     <div className="flex flex-col space-y-2">
-      <label className="text-sm font-medium">{label}</label>
+      <label className="text-sm font-medium text-muted-foreground">{label}</label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between"
+            className="w-full justify-between bg-secondary/50 border-muted hover:bg-secondary/80 transition-colors"
           >
             {selectedPlayer ? selectedPlayer.name : `Select ${label}...`}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0">
-          <Command>
+          <Command className="border border-muted">
             <CommandInput 
               placeholder={`Search ${label}...`}
               value={searchTerm}
               onValueChange={onSearchChange}
+              className="border-muted"
             />
-            <CommandEmpty>No player found.</CommandEmpty>
+            <CommandEmpty className="text-muted-foreground">No player found.</CommandEmpty>
             <CommandGroup>
               {players?.filter(p => 
                 p.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -69,6 +70,7 @@ export const PlayerSearch = ({
                     onPlayerSelect(player);
                     setOpen(false);
                   }}
+                  className="cursor-pointer hover:bg-primary/20"
                 >
                   <Check
                     className={cn(
