@@ -1,5 +1,5 @@
 import { processBattleBlock, saveBattlesToSupabase, Battle } from './utils/battle-processor.ts';
-import { hasNextPage } from './utils/html-parser.ts';
+import { hasNextPage, isValidBattlePage } from './utils/html-parser.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,23 +12,46 @@ const handleCors = (req: Request) => {
   }
 };
 
-const fetchWithProxy = async (url: string, page = 1) => {
+const fetchWithProxy = async (url: string, page = 1, retries = 3) => {
   const apiKey = Deno.env.get('SCRAPEOPS_API_KEY');
   if (!apiKey) {
     throw new Error('SCRAPEOPS_API_KEY is not set');
   }
 
   const pageUrl = `${url}${page > 1 ? `?page=${page}` : ''}`;
-  const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(pageUrl)}`;
+  const proxyUrl = `https://proxy.scrapeops.io/v1/?api_key=${apiKey}&url=${encodeURIComponent(pageUrl)}&render_js=1`;
   
   console.log(`Fetching page ${page} from ${pageUrl}`);
-  const response = await fetch(proxyUrl);
   
-  if (!response.ok) {
-    throw new Error(`Failed to fetch page ${page}: ${response.status} ${response.statusText}`);
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch page ${page}: ${response.status} ${response.statusText}`);
+      }
+      
+      const html = await response.text();
+      
+      // Validate the page content
+      if (!isValidBattlePage(html)) {
+        console.log(`Invalid battle page content on attempt ${attempt}, retrying...`);
+        if (attempt === retries) {
+          throw new Error('Maximum retries reached for invalid page content');
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+        continue;
+      }
+      
+      return html;
+    } catch (error) {
+      console.error(`Attempt ${attempt} failed:`, error);
+      if (attempt === retries) throw error;
+      await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+    }
   }
   
-  return response.text();
+  throw new Error(`Failed to fetch page ${page} after ${retries} attempts`);
 };
 
 const extractBattles = (html: string): Battle[] => {
@@ -59,8 +82,9 @@ const scrapeAllPages = async (baseUrl: string) => {
   let page = 1;
   let totalBattles = 0;
   let hasMore = true;
+  let consecutiveEmptyPages = 0;
 
-  while (hasMore) {
+  while (hasMore && consecutiveEmptyPages < 3) {
     console.log(`Scraping page ${page}`);
     try {
       const html = await fetchWithProxy(baseUrl, page);
@@ -72,16 +96,20 @@ const scrapeAllPages = async (baseUrl: string) => {
       if (battles.length > 0) {
         await saveBattlesToSupabase(battles);
         totalBattles += battles.length;
+        consecutiveEmptyPages = 0;
         console.log(`Saved ${battles.length} battles from page ${page}`);
+      } else {
+        consecutiveEmptyPages++;
+        console.log(`No battles found on page ${page}. Empty pages count: ${consecutiveEmptyPages}`);
       }
 
-      hasMore = hasNextPage(html) && battles.length > 0;
+      hasMore = hasNextPage(html) && consecutiveEmptyPages < 3;
       if (hasMore) {
         page++;
         console.log(`Moving to page ${page}`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Increased delay
       } else {
-        console.log('No more pages to scrape');
+        console.log('No more pages to scrape or too many empty pages');
       }
     } catch (error) {
       console.error(`Error scraping page ${page}:`, error);
