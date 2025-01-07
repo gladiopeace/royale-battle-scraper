@@ -47,26 +47,27 @@ const PlayerComparison = () => {
   const [showStats, setShowStats] = useState(false);
   const { toast } = useToast();
 
-  const { data: players = [], isError: isPlayersError } = useQuery({
+  const { data: players = [] } = useQuery({
     queryKey: ["players"],
     queryFn: fetchPlayers,
     retry: 1,
     gcTime: 0,
     staleTime: 30000,
-    onSuccess: () => {
-      console.log("Successfully fetched players");
-    },
-    onError: (error: Error) => {
-      console.error("Error fetching players:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch players. Please try again later.",
-        variant: "destructive",
-      });
+    onSettled: (data, error) => {
+      if (error) {
+        console.error("Error fetching players:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch players. Please try again later.",
+          variant: "destructive",
+        });
+      } else if (data) {
+        console.log("Successfully fetched players");
+      }
     }
   });
 
-  const { data: battles = [], isError: isBattlesError } = useQuery({
+  const { data: battles = [] } = useQuery({
     queryKey: ["battles", player1?.id, player2?.id],
     queryFn: () => {
       if (!player1?.id || !player2?.id) return [];
@@ -75,16 +76,17 @@ const PlayerComparison = () => {
     enabled: !!player1?.id && !!player2?.id && showStats,
     retry: 1,
     gcTime: 0,
-    onSuccess: () => {
-      console.log("Successfully fetched battles");
-    },
-    onError: (error: Error) => {
-      console.error("Error fetching battles:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch battles. Please try again later.",
-        variant: "destructive",
-      });
+    onSettled: (data, error) => {
+      if (error) {
+        console.error("Error fetching battles:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch battles. Please try again later.",
+          variant: "destructive",
+        });
+      } else if (data) {
+        console.log("Successfully fetched battles");
+      }
     }
   });
 
@@ -129,7 +131,7 @@ const PlayerComparison = () => {
         </div>
       )}
 
-      {showStats && player1 && player2 && !isBattlesError && (
+      {showStats && player1 && player2 && (
         <>
           <PlayerStats player1={player1} player2={player2} battles={battles} />
           <BattleHistory battles={battles} player1={player1} player2={player2} />
