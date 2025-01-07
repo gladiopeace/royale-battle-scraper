@@ -53,15 +53,16 @@ const PlayerComparison = () => {
     retry: 1,
     gcTime: 0,
     staleTime: 30000,
-    onSettled: (data, error) => {
-      if (error) {
+    meta: {
+      onError: (error: Error) => {
         console.error("Error fetching players:", error);
         toast({
           title: "Error",
           description: "Failed to fetch players. Please try again later.",
           variant: "destructive",
         });
-      } else if (data) {
+      },
+      onSuccess: () => {
         console.log("Successfully fetched players");
       }
     }
@@ -76,15 +77,16 @@ const PlayerComparison = () => {
     enabled: !!player1?.id && !!player2?.id && showStats,
     retry: 1,
     gcTime: 0,
-    onSettled: (data, error) => {
-      if (error) {
+    meta: {
+      onError: (error: Error) => {
         console.error("Error fetching battles:", error);
         toast({
           title: "Error",
           description: "Failed to fetch battles. Please try again later.",
           variant: "destructive",
         });
-      } else if (data) {
+      },
+      onSuccess: () => {
         console.log("Successfully fetched battles");
       }
     }
