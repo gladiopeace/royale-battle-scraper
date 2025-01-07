@@ -50,13 +50,19 @@ const PlayerComparison = () => {
   const { data: players = [], isError: isPlayersError } = useQuery({
     queryKey: ["players"],
     queryFn: fetchPlayers,
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to fetch players. Please try again later.",
-        variant: "destructive",
-      });
+    meta: {
+      errorMessage: "Failed to fetch players. Please try again later."
     },
+    retry: 1,
+    onSettled: (data, error) => {
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch players. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    }
   });
 
   const { data: battles = [], isError: isBattlesError } = useQuery({
@@ -66,13 +72,19 @@ const PlayerComparison = () => {
       return fetchBattles(player1.id, player2.id);
     },
     enabled: !!player1?.id && !!player2?.id && showStats,
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to fetch battles. Please try again later.",
-        variant: "destructive",
-      });
+    meta: {
+      errorMessage: "Failed to fetch battles. Please try again later."
     },
+    retry: 1,
+    onSettled: (data, error) => {
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch battles. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    }
   });
 
   const handlePlayerSelect = (player: Player, isPlayer1: boolean) => {
