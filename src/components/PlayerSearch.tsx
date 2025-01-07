@@ -26,9 +26,9 @@ export const PlayerSearch = ({
     <div className="flex flex-col space-y-2">
       <label className="text-sm font-medium text-muted-foreground">{label}</label>
       <Select
-        value={selectedPlayer?.id || ""}
+        value={selectedPlayer?._id || ""}
         onValueChange={(value) => {
-          const player = players.find((p) => p.id === value);
+          const player = players.find((p) => p._id === value);
           if (player) onPlayerSelect(player);
         }}
       >
@@ -38,18 +38,18 @@ export const PlayerSearch = ({
         <SelectContent>
           {players.map((player) => (
             <SelectItem
-              key={player.id}
-              value={player.id}
+              key={player._id}
+              value={player._id}
               className="cursor-pointer hover:bg-primary/20"
             >
               <div className="flex items-center">
                 <Check
                   className={cn(
                     "mr-2 h-4 w-4",
-                    selectedPlayer?.id === player.id ? "opacity-100" : "opacity-0"
+                    selectedPlayer?._id === player._id ? "opacity-100" : "opacity-0"
                   )}
                 />
-                {player.name}
+                {player.playerName}
               </div>
             </SelectItem>
           ))}
