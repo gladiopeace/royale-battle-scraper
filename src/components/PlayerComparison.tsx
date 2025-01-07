@@ -10,6 +10,10 @@ import { useToast } from "./ui/use-toast";
 const API_BASE_URL = "http://148.251.121.187:1880/clash";
 const AUTH_TOKEN = "222222";
 
+interface PlayersResponse {
+  data: Player[];
+}
+
 const fetchPlayers = async (): Promise<Player[]> => {
   const response = await fetch(`${API_BASE_URL}/players`, {
     headers: {
@@ -19,7 +23,8 @@ const fetchPlayers = async (): Promise<Player[]> => {
   if (!response.ok) {
     throw new Error('Failed to fetch players');
   }
-  return response.json();
+  const data: PlayersResponse = await response.json();
+  return data.data;
 };
 
 const fetchBattles = async (player1Id: string, player2Id: string) => {
@@ -69,12 +74,12 @@ const PlayerComparison = () => {
   });
 
   const { data: battles = [] } = useQuery({
-    queryKey: ["battles", player1?.id, player2?.id],
+    queryKey: ["battles", player1?.playerId, player2?.playerId],
     queryFn: () => {
-      if (!player1?.id || !player2?.id) return [];
-      return fetchBattles(player1.id, player2.id);
+      if (!player1?.playerId || !player2?.playerId) return [];
+      return fetchBattles(player1.playerId, player2.playerId);
     },
-    enabled: !!player1?.id && !!player2?.id && showStats,
+    enabled: !!player1?.playerId && !!player2?.playerId && showStats,
     retry: 1,
     gcTime: 0,
     meta: {

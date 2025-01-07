@@ -16,7 +16,7 @@ const PlayerStatsDisplay = ({ player, stats, isWinner }: PlayerStatsDisplayProps
   return (
     <div className="space-y-4">
       <h3 className="text-2xl font-bold flex items-center gap-2">
-        {player.name}
+        {player.playerName}
         {isWinner && <Crown className="h-6 w-6 text-yellow-500 animate-bounce" />}
       </h3>
       <div className="space-y-2">
@@ -57,8 +57,8 @@ export const PlayerStats = ({ player1, player2, battles }: PlayerStatsProps) => 
     return { wins, losses, ties, totalCrowns };
   };
 
-  const player1Stats = calculateStats(player1.id);
-  const player2Stats = calculateStats(player2.id);
+  const player1Stats = calculateStats(player1.playerId);
+  const player2Stats = calculateStats(player2.playerId);
   const player1WinRate = player1Stats.wins > player2Stats.wins;
 
   return (

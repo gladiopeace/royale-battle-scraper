@@ -1,8 +1,8 @@
 export interface Player {
-  id: string;
-  name: string;
-  total_battles: number;
-  total_crowns: number;
+  _id: string;
+  playerId: string;
+  playerName: string;
+  lastUpdated: string;
 }
 
 export interface Battle {

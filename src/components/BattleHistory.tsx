@@ -16,14 +16,14 @@ export const BattleHistory = ({ battles, player1, player2 }: BattleHistoryProps)
           <TableRow>
             <TableHead>Date</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead>{player1.name} Crowns</TableHead>
-            <TableHead>{player2.name} Crowns</TableHead>
+            <TableHead>{player1.playerName} Crowns</TableHead>
+            <TableHead>{player2.playerName} Crowns</TableHead>
             <TableHead>Winner</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {battles.map((battle) => {
-            const isPlayer1First = battle.player1_id === player1.id;
+            const isPlayer1First = battle.player1_id === player1.playerId;
             const player1Crowns = isPlayer1First ? battle.player1_crowns : battle.player2_crowns;
             const player2Crowns = isPlayer1First ? battle.player2_crowns : battle.player1_crowns;
             
@@ -34,8 +34,8 @@ export const BattleHistory = ({ battles, player1, player2 }: BattleHistoryProps)
                 <TableCell>{player1Crowns}</TableCell>
                 <TableCell>{player2Crowns}</TableCell>
                 <TableCell>
-                  {player1Crowns > player2Crowns ? player1.name :
-                   player2Crowns > player1Crowns ? player2.name :
+                  {player1Crowns > player2Crowns ? player1.playerName :
+                   player2Crowns > player1Crowns ? player2.playerName :
                    "Tie"}
                 </TableCell>
               </TableRow>
