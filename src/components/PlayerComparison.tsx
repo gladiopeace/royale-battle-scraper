@@ -14,10 +14,7 @@ const fetchPlayers = async (): Promise<Player[]> => {
   const response = await fetch(`${API_BASE_URL}/players`, {
     headers: {
       'Authorization': `Bearer ${AUTH_TOKEN}`,
-      'Accept': 'application/json',
-      'Access-Control-Allow-Origin': '*',
     },
-    mode: 'cors',
   });
   if (!response.ok) {
     throw new Error('Failed to fetch players');
@@ -31,10 +28,7 @@ const fetchBattles = async (player1Id: string, player2Id: string) => {
     headers: {
       'Authorization': `Bearer ${AUTH_TOKEN}`,
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Access-Control-Allow-Origin': '*',
     },
-    mode: 'cors',
     body: JSON.stringify({
       player1: player1Id,
       player2: player2Id,
@@ -59,14 +53,16 @@ const PlayerComparison = () => {
     retry: 1,
     gcTime: 0,
     staleTime: 30000,
-    meta: {
-      onError: () => {
-        toast({
-          title: "Error",
-          description: "Failed to fetch players. Please try again later.",
-          variant: "destructive",
-        });
-      }
+    onSuccess: () => {
+      console.log("Successfully fetched players");
+    },
+    onError: (error: Error) => {
+      console.error("Error fetching players:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch players. Please try again later.",
+        variant: "destructive",
+      });
     }
   });
 
@@ -79,14 +75,16 @@ const PlayerComparison = () => {
     enabled: !!player1?.id && !!player2?.id && showStats,
     retry: 1,
     gcTime: 0,
-    meta: {
-      onError: () => {
-        toast({
-          title: "Error",
-          description: "Failed to fetch battles. Please try again later.",
-          variant: "destructive",
-        });
-      }
+    onSuccess: () => {
+      console.log("Successfully fetched battles");
+    },
+    onError: (error: Error) => {
+      console.error("Error fetching battles:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch battles. Please try again later.",
+        variant: "destructive",
+      });
     }
   });
 
