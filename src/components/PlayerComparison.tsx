@@ -1,45 +1,78 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Player } from "@/types/player";
 import { PlayerSearch } from "./PlayerSearch";
 import { BattleHistory } from "./BattleHistory";
 import { PlayerStats } from "./PlayerStats";
 import { Button } from "./ui/button";
+import { useToast } from "./ui/use-toast";
+
+const API_BASE_URL = "http://148.251.121.187:1880/clash";
+const AUTH_TOKEN = "222222";
+
+const fetchPlayers = async (): Promise<Player[]> => {
+  const response = await fetch(`${API_BASE_URL}/players`, {
+    headers: {
+      Authorization: `Bearer ${AUTH_TOKEN}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch players');
+  }
+  return response.json();
+};
+
+const fetchBattles = async (player1Id: string, player2Id: string) => {
+  const response = await fetch(`${API_BASE_URL}/battles`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${AUTH_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      player1: player1Id,
+      player2: player2Id,
+      type: "clanMate"
+    }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch battles');
+  }
+  return response.json();
+};
 
 const PlayerComparison = () => {
   const [player1, setPlayer1] = useState<Player | null>(null);
   const [player2, setPlayer2] = useState<Player | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const { toast } = useToast();
 
-  const { data: players = [] } = useQuery({
+  const { data: players = [], isError: isPlayersError } = useQuery({
     queryKey: ["players"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("players")
-        .select("*")
-        .order("name");
-      
-      if (error) throw error;
-      return data;
+    queryFn: fetchPlayers,
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to fetch players. Please try again later.",
+        variant: "destructive",
+      });
     },
   });
 
-  const { data: battles = [] } = useQuery({
+  const { data: battles = [], isError: isBattlesError } = useQuery({
     queryKey: ["battles", player1?.id, player2?.id],
-    queryFn: async () => {
+    queryFn: () => {
       if (!player1?.id || !player2?.id) return [];
-
-      const { data, error } = await supabase
-        .from("battles")
-        .select("*")
-        .or(`and(player1_id.eq.${player1.id},player2_id.eq.${player2.id}),and(player1_id.eq.${player2.id},player2_id.eq.${player1.id})`)
-        .order("battle_time", { ascending: false });
-
-      if (error) throw error;
-      return data;
+      return fetchBattles(player1.id, player2.id);
     },
-    enabled: !!player1?.id && !!player2?.id,
+    enabled: !!player1?.id && !!player2?.id && showStats,
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to fetch battles. Please try again later.",
+        variant: "destructive",
+      });
+    },
   });
 
   const handlePlayerSelect = (player: Player, isPlayer1: boolean) => {
@@ -48,7 +81,7 @@ const PlayerComparison = () => {
     } else {
       setPlayer2(player);
     }
-    setShowStats(false); // Reset stats view when player selection changes
+    setShowStats(false);
   };
 
   const handleCompare = () => {
@@ -83,7 +116,7 @@ const PlayerComparison = () => {
         </div>
       )}
 
-      {showStats && player1 && player2 && (
+      {showStats && player1 && player2 && !isBattlesError && (
         <>
           <PlayerStats player1={player1} player2={player2} battles={battles} />
           <BattleHistory battles={battles} player1={player1} player2={player2} />
